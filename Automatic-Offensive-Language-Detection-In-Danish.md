@@ -72,16 +72,16 @@ stopwords_regex = paste(stopwords("da",source= "snowball"), collapse = '\\b|\\b'
 stopwords_regex = paste0('\\b', stopwords_regex, '\\b')
 training$text = stringr::str_replace_all(training$text, stopwords_regex, '')
 
-# Eemove numbers:
+# Remove numbers:
 training$text <-  removeNumbers(training$text)
 
 # Stem words:
 training$text <-  wordStem(training$text, language = "danish")
 
-# remove punctuation
+# Remove punctuation
 training$text<-removePunctuation(training$text)
 
-#repeat same procedures for test data
+# Repeat same procedures for test data
 testing$text<-tolower(testing$text) 
 stopwords_regex = paste(stopwords("da",source= "snowball"), collapse = '\\b|\\b')
 stopwords_regex = paste0('\\b', stopwords_regex, '\\b')
@@ -94,7 +94,7 @@ testing$text<-removePunctuation(testing$text)
 training<-training[,4:6]
 testing<-testing[,4:6]
 
-#Inspect training data:
+# Inspect training data:
 head(training)
 ```
 
@@ -108,12 +108,12 @@ head(training)
     ## 5   784 NOT   "desværre tyder    amerikanerne  helt ude  kontrol   kan stemme  ~
     ## 6  3191 NOT   "  fordi  danske børn  folkeskolerne     grund både  dårligere   ~
 
-## Step 3: Naive Bayes, Logistic Regression and SVM using tidymodels
+## Step 3: Naive Bayes-, Logistic Regression- and Support Vector Machine models using tidymodels
 
 We start off creating the text treatment recipe:
 
 ``` r
-# Create text recipe:
+# Create text recipe for Naive Bayes model:
 text_recipe_NB <- recipe(label ~ ., data = training) %>% 
   update_role(Id, new_role = "ID") %>% 
   step_tokenize(text, engine = "spacyr", token = "words") %>%
@@ -122,7 +122,7 @@ text_recipe_NB <- recipe(label ~ ., data = training) %>%
   step_tokenfilter(text, max_tokens = 100) %>%
   step_tfidf(text)
 
-# Create text recipe:
+# Create text recipe for Support Vector Machine model:
 text_recipe_SVM <- recipe(label ~ ., data = training) %>% 
   update_role(Id, new_role = "ID") %>% 
   step_tokenize(text, engine = "spacyr", token = "words") %>%
@@ -131,7 +131,7 @@ text_recipe_SVM <- recipe(label ~ ., data = training) %>%
   step_tokenfilter(text, max_tokens = 100) %>%
   step_tfidf(text)
 
-# Create text recipe:
+# Create text recipe for Logistic Regression model:
 text_recipe_LOG <- recipe(label ~ ., data = training) %>% 
   update_role(Id, new_role = "ID") %>% 
   step_tokenize(text, engine = "spacyr", token = "words") %>%
@@ -160,7 +160,7 @@ text_recipe_LOG <- recipe(label ~ ., data = training) %>%
   #step_tf(text)
 ```
 
-We now set the model specification (tidymodels framework) to make them
+Setting the model specifications (tidymodels framework) to make them
 ready for classification:
 
 ``` r
@@ -169,7 +169,7 @@ text_model_NB_spec <- naive_Bayes() %>% set_engine("naivebayes") %>% set_mode("c
 text_model_svm_spec <- svm_poly("classification") %>% set_engine("kernlab")
 ```
 
-We combine the model and the text processing recipe using worksflows:
+Combining the model and the text processing recipe using worksflows:
 
 ``` r
 text_model_log_wf <- workflows::workflow() %>% add_recipe(text_recipe_LOG) %>% add_model(text_model_log_spec)
@@ -180,7 +180,7 @@ text_model_svm_wf <- workflows::workflow() %>% add_recipe(text_recipe_SVM) %>% a
 ## Step 4: Fitting:
 
 ``` r
-#Fit the models on the training data:
+# Fit the models on the training data:
 fit_log_model <- fit(text_model_log_wf, training)
 ```
 
@@ -201,7 +201,7 @@ fit_svm_model <- fit(text_model_svm_wf, training)
 
 ## Step 5: Predictions:
 
-We make the models predict the classes of the test data:
+Making the models predict the classes of the test data:
 
 ``` r
 predictions_log <- predict(fit_log_model, testing) # Classifications
@@ -276,7 +276,7 @@ bind_cols(testing,predictions_SVM) %>% conf_mat(label, .pred_class)
     ##        NOT 288  36
     ##        OFF   0   5
 
-\#Part 2: Neural Networks.
+# Part 2: Neural Networks.
 
 ## Step 1: Preprocessing:
 
@@ -330,6 +330,8 @@ tokenizer_test %>%
 bla bla bla
 
 ``` r
+# CAN BE DELETED
+
 # Train
 tokenizer$document_count
 ```
@@ -346,6 +348,8 @@ tokenizer_test$document_count
 bla bla bla
 
 ``` r
+# CAN BE DELETED
+
 # Train
 tokenizer$word_index %>%
   head()
@@ -397,8 +401,8 @@ bla bla bla
 
 ``` r
 # Train
-text_seqs <- texts_to_sequences(tokenizer, text)
-text_seqs %>%
+text_seqs <- texts_to_sequences(tokenizer, text) # CAN NOT BE DELETED!!
+text_seqs %>% # CAN BE DELETED
   head()
 ```
 
@@ -422,8 +426,8 @@ text_seqs %>%
 
 ``` r
 # Test
-text_seqs_test <- texts_to_sequences(tokenizer_test, text_test)
-text_seqs_test %>%
+text_seqs_test <- texts_to_sequences(tokenizer_test, text_test) # CAN NOT BE DELETED!!
+text_seqs_test %>% # CAN BE DELETED
   head()
 ```
 
@@ -463,7 +467,7 @@ bla bla bla
 # Train
 x_train <- text_seqs %>%
   pad_sequences(maxlen = maxlen)
-dim(x_train)
+dim(x_train) # CAN BE DELETED
 ```
 
     ## [1] 2960  100
@@ -472,7 +476,7 @@ dim(x_train)
 # Test
 x_test <- text_seqs_test %>%
   pad_sequences(maxlen = maxlen)
-dim(x_test)
+dim(x_test) # CAN BE DELETED
 ```
 
     ## [1] 329 100
@@ -482,7 +486,7 @@ bla bla bla
 ``` r
 # Train
 y_train <- training$label
-length(y_train)
+length(y_train) # CAN BE DELETED
 ```
 
     ## [1] 2960
@@ -490,16 +494,10 @@ length(y_train)
 ``` r
 # Test
 y_test <- testing$label
-length(y_test)
+length(y_test) # CAN BE DELETED
 ```
 
     ## [1] 329
-
-``` r
-# Bla bla
-y_test<-y_test
-y_train<-y_train
-```
 
 \#\#LSTM
 
