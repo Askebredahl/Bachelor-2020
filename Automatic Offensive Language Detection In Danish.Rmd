@@ -14,7 +14,10 @@ This is the R-code-tutorial for the bachelor project of Aske Bredahl & Johan Hor
 ```{r setup}
 # Loading/installing the required packages:
 library(pacman)
-p_load(readr, tidyverse,rsample,recipes, textrecipes, parsnip, yardstick,workflows, discrim,kernlab,stringr, tm, ggplot2, GGally, e1071, caret,stopwords, stringi, SnowballC,fastmatch, parsnip, keras, tensorflow)
+p_load(readr, tidyverse,rsample,recipes, textrecipes, parsnip, yardstick,workflows, discrim,kernlab,stringr, tm, ggplot2, GGally, e1071, caret,stopwords, stringi, SnowballC,fastmatch, parsnip, keras, tensorflow, ranger, MLmetrics)
+
+library(deepviz)
+library(magrittr)
 ```
 
 ## Step 1: Loading data:
@@ -100,6 +103,14 @@ text_recipe_LOG <- recipe(label ~ ., data = training) %>%
   step_tokenfilter(text, max_tokens = 100) %>%
   step_tfidf(text)
 
+
+text_recipe_RF <- recipe(label ~ ., data = training) %>% 
+  update_role(Id, new_role = "ID") %>% 
+  step_tokenize(text, engine = "spacyr", token = "words") %>%
+ ## step_stopwords(text) %>% 
+  step_lemma(text) %>%
+  step_tokenfilter(text, max_tokens = 100) %>%
+  step_tfidf(text)
 #
 
 # NGRAM recipie
@@ -125,6 +136,8 @@ Setting the model specifications (tidymodels framework) to make them ready for c
 text_model_log_spec <- logistic_reg() %>% set_engine("glm") %>% set_mode("classification")
 text_model_NB_spec <- naive_Bayes() %>% set_engine("naivebayes") %>% set_mode("classification")
 text_model_svm_spec <- svm_poly("classification") %>% set_engine("kernlab")
+text_model_rf_spec <- rand_forest("classification") %>% set_engine("randomForest")
+
 ```
 
 Combining the model and the text processing recipe using worksflows:
@@ -132,7 +145,10 @@ Combining the model and the text processing recipe using worksflows:
 text_model_log_wf <- workflows::workflow() %>% add_recipe(text_recipe_LOG) %>% add_model(text_model_log_spec)
 text_model_NB_wf <- workflows::workflow() %>% add_recipe(text_recipe_NB) %>% add_model(text_model_NB_spec)
 text_model_svm_wf <- workflows::workflow() %>% add_recipe(text_recipe_SVM) %>% add_model(text_model_svm_spec)
+text_model_rf_wf <- workflows::workflow() %>% add_recipe(text_recipe_RF) %>% add_model(text_model_rf_spec)
 ```
+
+rand_forest()
 
 ## Step 4: Fitting:
 ```{r}
@@ -140,6 +156,7 @@ text_model_svm_wf <- workflows::workflow() %>% add_recipe(text_recipe_SVM) %>% a
 fit_log_model <- fit(text_model_log_wf, training)
 fit_NB_model <- fit(text_model_NB_wf, training)
 fit_svm_model <- fit(text_model_svm_wf, training)
+fit_rf_model <- fit(text_model_rf_wf, training)
 ```
 
 ## Step 5: Predictions:
@@ -154,9 +171,33 @@ predictions_NB$raw_NB <- predict(fit_NB_model, testing,type="prob") # Raw probab
 
 predictions_SVM <- stats::predict(fit_svm_model, testing,type="class") # Classifications
 predictions_SVM$raw_svm <- stats::predict(fit_svm_model, testing,type="prob") # Raw probabilities
+
+predictions_RF <- stats::predict(fit_rf_model, testing,type="class") # Classifications
+predictions_RF$raw_rf <- stats::predict(fit_rf_model, testing,type="prob") # Raw probabilities
+
+
+
 ```
 
 ## Step 6: Evaluate
+
+### Random Forest:
+```{r}
+bind_cols(testing,predictions_RF) %>% conf_mat(label, .pred_class) 
+
+
+#testing$rf<-testing$randomforrest$.pred_class
+
+#testing$rf<-as.numeric(testing$rf)-1
+#testing$label<-as.numeric(testing$label)-1
+
+
+#testing$rf<-as.factor(testing$rf)
+#testing$label<-as.factor(testing$label)
+
+#F1_Score(y_true= testing$label, y_pred = testing$rf)
+```
+
 
 ### Logistic Regression:
 ```{r}
@@ -306,6 +347,11 @@ model_lstm %>% compile(
 
 ```
 
+```{r}
+model_lstm %>% plot_model()
+```
+
+
 ## Step 2: Fit model:
 ```{r}
 history_lstm <- model_lstm %>% fit(
@@ -409,6 +455,11 @@ model_cnn %>% compile(
 )
 ```
 
+```{r}
+model_cnn %>% plot_model()
+```
+
+
 ## Step 2: Fit model:
 ```{r}
 history_cnn <- model_cnn %>% fit(
@@ -484,6 +535,11 @@ callback_reduce_lr_on_plateau(
   min_lr = 0
 )
 ```
+
+```{r}
+model_bilstm %>% plot_model() 
+```
+
 
 ## Step 2: Fit model:
 ```{r}
