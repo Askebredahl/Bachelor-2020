@@ -79,25 +79,25 @@ We start off creating the text treatment recipe:
 # Create text recipe for Naive Bayes model:
 text_recipe_NB <- recipe(label ~ ., data = training) %>% 
   update_role(Id, new_role = "ID") %>% 
-  step_tokenize(text, engine = "spacyr", token = "words") %>%
+  step_tokenize(text, engine = "tokenizers", token = "words") %>%
  ## step_stopwords(text) %>% 
-  step_lemma(text) %>%
-  step_tokenfilter(text, max_tokens = 100) %>%
+  #step_lemma(text) %>%
+  step_tokenfilter(text, max_tokens = 100) %>% #Best = 100
   step_tfidf(text)
 
 # Create text recipe for Support Vector Machine model:
 text_recipe_SVM <- recipe(label ~ ., data = training) %>% 
   update_role(Id, new_role = "ID") %>% 
-  step_tokenize(text, engine = "spacyr", token = "words") %>%
+  step_tokenize(text, engine = "tokenizers", token = "words") %>%
  ## step_stopwords(text) %>% 
-  step_lemma(text) %>%
-  step_tokenfilter(text, max_tokens = 100) %>%
+  #step_lemma(text) %>%
+  step_tokenfilter(text, max_tokens = 10000) %>% #Best so far 10000
   step_tfidf(text)
 
 # Create text recipe for Logistic Regression model:
 text_recipe_LOG <- recipe(label ~ ., data = training) %>% 
   update_role(Id, new_role = "ID") %>% 
-  step_tokenize(text, engine = "spacyr", token = "words") %>%
+  step_tokenize(text, engine = "tekenizers", token = "words") %>%
  ## step_stopwords(text) %>% 
   step_lemma(text) %>%
   step_tokenfilter(text, max_tokens = 100) %>%
@@ -106,10 +106,10 @@ text_recipe_LOG <- recipe(label ~ ., data = training) %>%
 
 text_recipe_RF <- recipe(label ~ ., data = training) %>% 
   update_role(Id, new_role = "ID") %>% 
-  step_tokenize(text, engine = "spacyr", token = "words") %>%
+  step_tokenize(text, engine = "tokenizers", token = "words") %>%
  ## step_stopwords(text) %>% 
-  step_lemma(text) %>%
-  step_tokenfilter(text, max_tokens = 100) %>%
+  ##step_lemma(text) %>%
+  step_tokenfilter(text, max_tokens = 2500) %>% #Best = 2500
   step_tfidf(text)
 #
 
@@ -127,7 +127,7 @@ text_recipe_RF <- recipe(label ~ ., data = training) %>%
 #rec <- recipe(~ text, data = abc_tibble) %>%
  # step_tokenize(text) %>%
   #step_ngram(text, num_tokens = 3) %>%
-  #step_tokenfilter(text) %>%
+  #step_tokenfilter(text, max_tokens = 100) %>%
   #step_tf(text)
 ```
 
@@ -147,8 +147,6 @@ text_model_NB_wf <- workflows::workflow() %>% add_recipe(text_recipe_NB) %>% add
 text_model_svm_wf <- workflows::workflow() %>% add_recipe(text_recipe_SVM) %>% add_model(text_model_svm_spec)
 text_model_rf_wf <- workflows::workflow() %>% add_recipe(text_recipe_RF) %>% add_model(text_model_rf_spec)
 ```
-
-rand_forest()
 
 ## Step 4: Fitting:
 ```{r}
@@ -184,18 +182,15 @@ predictions_RF$raw_rf <- stats::predict(fit_rf_model, testing,type="prob") # Raw
 ### Random Forest:
 ```{r}
 bind_cols(testing,predictions_RF) %>% conf_mat(label, .pred_class) 
+testing$rf<-predictions_RF$.pred_class
+testing$label<-as.numeric(testing$label)-1
+testing$rf<-as.numeric(testing$rf)-1
+testing$rf<-as.character(testing$rf)
+testing$label<-as.character(testing$label)
 
+#F1-Score
+F1_Score_macro(y_true= testing$label, y_pred = testing$rf)
 
-#testing$rf<-testing$randomforrest$.pred_class
-
-#testing$rf<-as.numeric(testing$rf)-1
-#testing$label<-as.numeric(testing$label)-1
-
-
-#testing$rf<-as.factor(testing$rf)
-#testing$label<-as.factor(testing$label)
-
-#F1_Score(y_true= testing$label, y_pred = testing$rf)
 ```
 
 
@@ -209,6 +204,8 @@ bind_cols(testing,predictions_log) %>% conf_mat(label, .pred_class)
 ```{r}
 bind_cols(testing,predictions_NB) %>% accuracy(truth = label, estimate = .pred_class)
 bind_cols(testing,predictions_NB) %>% conf_mat(label, .pred_class) 
+
+
 ```
 
 ### SVM
