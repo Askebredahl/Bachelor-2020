@@ -97,10 +97,10 @@ text_recipe_SVM <- recipe(label ~ ., data = training) %>%
 # Create text recipe for Logistic Regression model:
 text_recipe_LOG <- recipe(label ~ ., data = training) %>% 
   update_role(Id, new_role = "ID") %>% 
-  step_tokenize(text, engine = "tekenizers", token = "words") %>%
+  step_tokenize(text, engine = "tokenizers", token = "words") %>%
  ## step_stopwords(text) %>% 
-  step_lemma(text) %>%
-  step_tokenfilter(text, max_tokens = 100) %>%
+  #step_lemma(text) %>%
+  step_tokenfilter(text, max_tokens = 125) %>% #Best = 125
   step_tfidf(text)
 
 
