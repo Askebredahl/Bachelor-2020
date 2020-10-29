@@ -111,24 +111,6 @@ text_recipe_RF <- recipe(label ~ ., data = training) %>%
   ##step_lemma(text) %>%
   step_tokenfilter(text, max_tokens = 2500) %>% #Best = 2500
   step_tfidf(text)
-#
-
-# NGRAM recipie
-#text_recipe <- recipe(label ~ ., data = training) %>% 
- # update_role(Id, new_role = "ID") %>% 
-  #step_tokenize(text) %>%
-  #step_ngram(text, num_tokens = 5) %>%
- ## step_stopwords(text) %>% 
-  ##step_lemma(text) %>%
-  #step_tokenfilter(text, max_tokens = 100) %>%
-  #step_tfidf(text)
-
-#TRI GRAM:
-#rec <- recipe(~ text, data = abc_tibble) %>%
- # step_tokenize(text) %>%
-  #step_ngram(text, num_tokens = 3) %>%
-  #step_tokenfilter(text, max_tokens = 100) %>%
-  #step_tf(text)
 ```
 
 Setting the model specifications (tidymodels framework) to make them ready for classification:
@@ -172,9 +154,6 @@ predictions_SVM$raw_svm <- stats::predict(fit_svm_model, testing,type="prob") # 
 
 predictions_RF <- stats::predict(fit_rf_model, testing,type="class") # Classifications
 predictions_RF$raw_rf <- stats::predict(fit_rf_model, testing,type="prob") # Raw probabilities
-
-
-
 ```
 
 ## Step 6: Evaluate
@@ -182,29 +161,11 @@ predictions_RF$raw_rf <- stats::predict(fit_rf_model, testing,type="prob") # Raw
 ### Random Forest:
 ```{r}
 bind_cols(testing,predictions_RF) %>% conf_mat(label, .pred_class) 
-testing$rf<-predictions_RF$.pred_class
-testing$label<-as.numeric(testing$label)-1
-testing$rf<-as.numeric(testing$rf)-1
-testing$rf<-as.character(testing$rf)
-testing$label<-as.character(testing$label)
-
-testing$rf<-as.factor(testing$rf)
-testing$label<-as.factor(testing$label)
-
-
-#F1-Score
-F1_Score_macro(y_true= testing$label, y_pred = testing$rf)
-
-#write.csv(testing, "RF_preds.tsv", sep= "\t")
-
-
-#?F1_Score_macro
 ```
 
 
 ### Logistic Regression:
 ```{r}
-bind_cols(testing,predictions_log) %>% accuracy(truth = label, estimate = .pred_class)
 bind_cols(testing,predictions_log) %>% conf_mat(label, .pred_class) 
 ```
 
@@ -222,12 +183,44 @@ bind_cols(testing,predictions_SVM) %>% accuracy(truth = label, estimate = .pred_
 bind_cols(testing,predictions_SVM) %>% conf_mat(label, .pred_class) 
 ```
 
+## F1-Scores
+```{r}
+testing$label<-as.character(as.numeric(testing$label)-1)
+predictions_RF$.pred_class<-as.character(as.numeric(predictions_RF$.pred_class)-1)
+predictions_NB$.pred_class<-as.character(as.numeric(predictions_NB$.pred_class)-1)
+predictions_SVM$.pred_class<-as.character(as.numeric(predictions_SVM$.pred_class)-1)
+predictions_log$.pred_class<-as.character(as.numeric(predictions_log$.pred_class)-1)
+
+```
+
+## F1-Scores
+
+### Random Forest
+```{r}
+F1_Score_macro(y_true= testing$label, y_pred = predictions_RF$.pred_class)
+```
+
+### Logistic Regression
+```{r}
+F1_Score_macro(y_true= testing$label, y_pred = predictions_log$.pred_class)
+```
+
+### Naive Bayes
+```{r}
+F1_Score_macro(y_true= testing$label, y_pred = predictions_NB$.pred_class)
+```
+
+### SVM
+```{r}
+F1_Score_macro(y_true= testing$label, y_pred = predictions_SVM$.pred_class)
+```
+
 # Part 2: Neural Networks.
 
 ## Step 1: Preprocessing:
 ```{r}
-training$label<-as.numeric(training$label)-1
-testing$label<-as.numeric(testing$label)-1
+training$label<-as.numeric(training$label)
+testing$label<-as.numeric(testing$label)
 
 # Inspect training data:
 head(training)
@@ -309,7 +302,7 @@ text_seqs_test %>% # CAN BE DELETED
 #epochs <- 5
 
 
-max_features <- 20000
+max_features <- 1000 #Should be the same as tokenizing
 batch_size <- 32
 # Cut texts after this number of words (among top max_features most common words)
 maxlen <- 80  
@@ -402,7 +395,7 @@ plot(history_lstm,method= "ggplot2")
 
 
 
-predict_classes_lstm <- predict_classes(model_lstm, x_test))
+predict_classes_lstm <- predict_classes(model_lstm, x_test)
 bind_cols(testing, predictions_log) %>% conf_mat(label, .pred_class) 
 
 neural_probs <- data.frame(predict_LSTM = predict_classes(model_lstm, x_test))
