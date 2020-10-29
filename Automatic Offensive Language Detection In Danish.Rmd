@@ -188,9 +188,17 @@ testing$rf<-as.numeric(testing$rf)-1
 testing$rf<-as.character(testing$rf)
 testing$label<-as.character(testing$label)
 
+testing$rf<-as.factor(testing$rf)
+testing$label<-as.factor(testing$label)
+
+
 #F1-Score
 F1_Score_macro(y_true= testing$label, y_pred = testing$rf)
 
+#write.csv(testing, "RF_preds.tsv", sep= "\t")
+
+
+#?F1_Score_macro
 ```
 
 
@@ -291,13 +299,20 @@ text_seqs_test %>% # CAN BE DELETED
 
 ## Step 4: Overall Model specifications (revisit):
 ```{r}
-maxlen <- 100
+#Embedding & Conolution
+#maxlen <- 100 #100
+#batch_size <- 32
+#embedding_dims <- 50
+#filters <- 64
+#kernel_size <- 3
+#hidden_dims <- 50
+#epochs <- 5
+
+
+max_features <- 20000
 batch_size <- 32
-embedding_dims <- 50
-filters <- 64
-kernel_size <- 3
-hidden_dims <- 50
-epochs <- 5
+# Cut texts after this number of words (among top max_features most common words)
+maxlen <- 80  
 ```
 
 bla bla bla
@@ -329,11 +344,25 @@ length(y_test) # CAN BE DELETED
 ## Step 1: Define model in Keras
 
 ```{r}
+cat(length(x_train), 'train sequences\n')
+cat(length(x_test), 'test sequences\n')
+
+cat('Pad sequences (samples x time)\n')
+x_train <- pad_sequences(x_train, maxlen = maxlen)
+x_test <- pad_sequences(x_test, maxlen = maxlen)
+cat('x_train shape:', dim(x_train), '\n')
+cat('x_test shape:', dim(x_test), '\n')
+cat('Build model...\n')
+```
+
+
+```{r}
 model_lstm <- keras_model_sequential()
 model_lstm %>%
   layer_embedding(input_dim = max_features, output_dim = 128) %>% 
   layer_lstm(units = 64, dropout = 0.2, recurrent_dropout = 0.2) %>% 
   layer_dense(units = 1, activation = 'sigmoid')
+
 
 # Try using different optimizers and different optimizer configs
 model_lstm %>% compile(
@@ -351,12 +380,15 @@ model_lstm %>% plot_model()
 
 ## Step 2: Fit model:
 ```{r}
+cat('Train...\n')
 history_lstm <- model_lstm %>% fit(
   x_train, y_train,
   batch_size = batch_size,
   epochs = 10,
   validation_data = list(x_test, y_test)
 )
+
+?cat
 ```
 
 Plot training epochs
@@ -367,13 +399,22 @@ plot(history_lstm,method= "ggplot2")
 
 ## Step 3: Evaluate:
 ```{r}
+
+
+
+predict_classes_lstm <- predict_classes(model_lstm, x_test))
+bind_cols(testing, predictions_log) %>% conf_mat(label, .pred_class) 
+
 neural_probs <- data.frame(predict_LSTM = predict_classes(model_lstm, x_test))
 neural_probs$raw_probs_off_LSTM<-predict_proba(model_lstm, x_test)
 neural_probs$raw_probs_not_LSTM<-1-neural_probs$raw_probs_off_LSTM
+
+
 ```
 
 ## CNN:
-
+# Change to: https://github.com/rstudio/keras/blob/master/vignettes/examples/imdb_cnn.R ?
+It is currently CNN_LSTM (https://github.com/rstudio/keras/blob/master/vignettes/examples/imdb_cnn_lstm.R)
 ## Step 1: Set model specifications
 
 Bla bla
@@ -553,6 +594,65 @@ Plot training epochs
 ```{r}
 plot(history_bilstm,method= "ggplot2", smooth = TRUE)
 ```
+
+
+## Real CNN
+
+```{r}
+#Initialize model
+model_cnn_real <- keras_model_sequential()
+
+model_cnn_real %>% 
+  # Start off with an efficient embedding layer which maps
+  # the vocab indices into embedding_dims dimensions
+  layer_embedding(max_features, embedding_dims, input_length = maxlen) %>%
+  layer_dropout(0.2) %>%
+
+  # Add a Convolution1D, which will learn filters
+    # Word group filters of size filter_length:
+  layer_conv_1d(
+    filters, kernel_size, 
+    padding = "valid", activation = "relu", strides = 1
+  ) %>%
+  # Apply max pooling:
+  layer_global_max_pooling_1d() %>%
+
+  # Add a vanilla hidden layer:
+  layer_dense(hidden_dims) %>%
+
+  # Apply 20% layer dropout
+  layer_dropout(0.2) %>%
+  layer_activation("relu") %>%
+
+  # Project onto a single unit output layer, and squash it with a sigmoid
+
+  layer_dense(1) %>%
+  layer_activation("sigmoid")
+
+# Compile model
+model_cnn_real %>% compile(
+  loss = "binary_crossentropy",
+  optimizer = "adam",
+  metrics = c("accuracy","Precision","Recall")
+)
+
+# Training ----------------------------------------------------------------
+
+history_cnn_real <- model_cnn_real %>%
+  fit(
+    x_train, y_train,
+    batch_size = batch_size,
+    epochs = 15,
+    validation_data = list(x_test, y_test)
+  )
+```
+
+```{r}
+plot(history_cnn_real,method= "ggplot2", smooth = TRUE)
+
+model_cnn_real %>% plot_model() 
+```
+
 
 ## Step 3: Evaluate
 ```{r}
